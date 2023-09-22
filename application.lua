@@ -77,8 +77,8 @@ end
 function connect_mqtt()
     m:connect(mqtt_host, 1883, false, function(client)
 		print("Connected")
-		client:publish("sm/state", "online", 0, 0)
-		client:subscribe("sm/state", 0)
+		client:publish("conditioner/state", "online", 0, 0)
+		client:subscribe("conditioner/state", 0)
     end,
 	function(client, reason)
 		print("Connection failed reason: " .. reason)
@@ -109,7 +109,25 @@ function mqtt_send_loop()
 end
 
 function main_loop()
-	
+	if air_in_temp <= air_set_temp then
+		if fan_level > 0 then
+			fan_level = fan_level - 1
+			water_valve = 1
+		else
+			water_valve = 0
+		end
+	elseif air_in_temp > air_set_temp then
+		water_valve = 1
+		if fan_level < 3 then
+			fan_level = fan_level + 1
+		end
+	end
+	fan(fan_level)
+	if water_valve == 1 then
+		water_valve_on()
+	else
+		water_valve_off()
+	end
 end
 
 m = mqtt.Client("conditioner", 120, mqtt_user, mqtt_pass)
@@ -140,5 +158,5 @@ init_pins()
 connect_mqtt()
 
 tmr.create():alarm(60000, tmr.ALARM_AUTO, mqtt_send_loop) 	-- every 60 seconds
-tmr.create():alarm(30000, tmr.ALARM_AUTO, main_loop) 		-- every 30 seconds
+tmr.create():alarm(120000, tmr.ALARM_AUTO, main_loop) 		-- every 120 seconds
 tmr.create():alarm(3000, tmr.ALARM_AUTO, drain_pump_loop)	-- every 3 seconds
