@@ -54,7 +54,8 @@ function drain_pump_off()
 	gpio.write(drain_pump_pin, gpio.LOW)
 end
 
-function fan(level=0)
+function fan(level)
+	level = level or 0				-- default value
 	if level == 1 then
 		gpio.write(fan_level1_pin, gpio.HIGH)
 		gpio.write(fan_level2_pin, gpio.LOW)
@@ -109,24 +110,31 @@ function mqtt_send_loop()
 end
 
 function main_loop()
-	if air_in_temp <= air_set_temp then
-		if fan_level > 0 then
-			fan_level = fan_level - 1
-			water_valve = 1
-		else
-			water_valve = 0
-		end
-	elseif air_in_temp > air_set_temp then
-		water_valve = 1
-		if fan_level < 3 then
-			fan_level = fan_level + 1
-		end
-	end
-	fan(fan_level)
-	if water_valve == 1 then
-		water_valve_on()
-	else
+	if power_state == 0 then
 		water_valve_off()
+		fan_level = 0
+		fan(fan_level)
+	elseif power_state == 1 then
+		if air_in_temp <= air_set_temp then
+			if fan_level > 0 then
+				fan_level = fan_level - 1
+				water_valve = 1
+			else
+				water_valve = 0
+			end
+		elseif air_in_temp > air_set_temp then
+			water_valve = 1
+			if fan_level < 3 then
+				fan_level = fan_level + 1
+			end
+		end
+		fan(fan_level)
+		if water_valve == 1 then
+			water_valve_on()
+		else
+			water_valve_off()
+		end
+	elseif power_state == 2 then
 	end
 end
 
